@@ -26,8 +26,8 @@ async def fetch_exhange_rates(days: int):
     for i in range(1, days + 1):
         date = (today - timedelta(days=i)).strftime("%d.%m.%Y")
         exchange_rate = await api.get_exchange_rate(date)
-        eur_data = exchange_rate[0][date]["exchangeRate"][8]
-        usd_data = exchange_rate[0][date]["exchangeRate"][23]
+        eur_data = exchange_rate["exchangeRate"][8]
+        usd_data = exchange_rate["exchangeRate"][23]
 
         results.append(
             {
