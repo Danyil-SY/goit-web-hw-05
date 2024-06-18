@@ -4,9 +4,35 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="main.css" />
+    <style>
+      #help {
+        margin-top: 20px;
+        display: block;
+      }
+    </style>
   </head>
 
   <body>
+    <div id="help">
+      <h2>Chat Commands</h2>
+      <ul>
+        <li><strong>exchange [days] [currencies]</strong> - Get the exchange rates for the specified number of days and currencies.</li>
+        <li>Example: <code>exchange 2 EUR USD</code> - Get the exchange rates for EUR and USD for the last 2 days.</li>
+      </ul>
+      <h3>Available Currencies</h3>
+      <ul>
+        <li>USD - US Dollar</li>
+        <li>EUR - Euro</li>
+        <li>GBP - British Pound</li>
+        <li>CHF - Swiss Franc</li>
+        <li>JPY - Japanese Yen</li>
+        <li>CAD - Canadian Dollar</li>
+        <li>AUD - Australian Dollar</li>
+        <li>CNY - Chinese Yuan</li>
+        <li>PLN - Polish Zloty</li>
+        <li>RUB - Russian Ruble</li>
+      </ul>
+    </div>
     <form id="formChat">
       <input type="text" id="textField" />
       <button type="submit">Send message</button>

@@ -1,68 +1,69 @@
 import aiohttp
+import argparse
 import asyncio
-import json
-from datetime import datetime, timedelta
 import sys
+from datetime import datetime, timedelta
 
 
-class PrivatBankAPI:
-    def __init__(self):
-        self.base_url = "https://api.privatbank.ua/p24api/exchange_rates?"
-
-    async def get_exchange_rate(self, date: str) -> dict:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.base_url}json&date={date}") as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    return None
+API_URL = "https://api.privatbank.ua/p24api/exchange_rates?json&date={date}"
 
 
-async def fetch_exhange_rates(days: int):
-    api = PrivatBankAPI()
-    today = datetime.now()
-    results = []
-
-    for i in range(1, days + 1):
-        date = (today - timedelta(days=i)).strftime("%d.%m.%Y")
-        exchange_rate = await api.get_exchange_rate(date)
-        eur_data = exchange_rate["exchangeRate"][8]
-        usd_data = exchange_rate["exchangeRate"][23]
-
-        results.append(
-            {
-                date: {
-                    "EUR": {
-                        "sale": eur_data.get("saleRateNB", ""),
-                        "purchase": eur_data.get("purchaseRateNB", ""),
-                    },
-                    "USD": {
-                        "sale": usd_data.get("saleRateNB", ""),
-                        "purchase": usd_data.get("purchaseRateNB", ""),
-                    },
-                }
-            }
-        )
-
-    return results
+async def fetch_rate_for_date(
+    session: aiohttp.ClientSession, date: str, currencies: list[str]
+) -> dict[str, dict[str, dict[str, float]]]:
+    try:
+        async with session.get(API_URL.format(date=date)) as response:
+            data = await response.json()
+            rates = {currency: {} for currency in currencies}
+            for rate in data.get("exchangeRate", []):
+                if rate["currency"] in rates:
+                    rates[rate["currency"]] = {
+                        "sale": rate.get("saleRate"),
+                        "purchase": rate.get("purchaseRate"),
+                    }
+            return {date: rates}
+    except Exception as e:
+        print(f"Error fetching data for {date}: {e}")
+        return {}
 
 
-async def main(days: int):
-    exchange_rates = await fetch_exhange_rates(days)
-    print(json.dumps(exchange_rates, indent=2))
+async def fetch_rates(
+    days: int, currencies: list[str]
+) -> list[dict[str, dict[str, dict[str, float]]]]:
+    async with aiohttp.ClientSession() as session:
+        tasks = [
+            fetch_rate_for_date(
+                session,
+                (datetime.now() - timedelta(days=i)).strftime("%d.%m.%Y"),
+                currencies,
+            )
+            for i in range(days)
+        ]
+        return await asyncio.gather(*tasks)
+
+
+async def main(days: int, currencies: list[str]):
+    rates = await fetch_rates(days, currencies)
+    print(rates)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <number_of_days")
+    parser = argparse.ArgumentParser(description="Fetch currency rates from PrivatBank")
+    parser.add_argument(
+        "days", type=int, help="Number of days to fetch rates for (up to 10)"
+    )
+    parser.add_argument(
+        "--currencies",
+        type=str,
+        nargs="+",
+        default=["EUR", "USD"],
+        help="List of currencies to fetch rates for",
+    )
+
+    args = parser.parse_args()
+
+    if args.days > 10:
+        print("You can only fetch rates for the last 10 days.")
         sys.exit(1)
 
-    try:
-        days = int(sys.argv[1])
-        if days <= 0 or days > 10:
-            raise ValueError
-    except ValueError:
-        print("Number of days msut be an integer between 1 and 10")
-        sys.exit(1)
-
-    asyncio.run(main(days))
+    asyncio.run(main(args.days, args.currencies))
